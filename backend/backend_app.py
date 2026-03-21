@@ -1,3 +1,14 @@
+"""
+Masterblog API - Backend
+A simple RESTful API for managing blog posts, built with Flask.
+
+Endpoints:
+    GET    /api/posts              - Retrieve all posts
+    POST   /api/posts              - Create a new post
+    DELETE /api/posts/<id>         - Delete a post by ID
+    PUT    /api/posts/<id>         - Update a post by ID
+    GET    /api/posts/search       - Search posts by title and/or content
+"""
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -11,28 +22,46 @@ POSTS = [
 ]
 
 
-
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
+    """Return a list of all blog posts."""
     return jsonify(POSTS), 200
-
 
 
 @app.route('/api/posts', methods=['POST'])
 def add_post():
+    """Create a new blog post.
+
+    Expects a JSON body with 'title' and 'content' fields.
+    Assigns a new unique ID by incrementing the current maximum.
+
+    Returns:
+        201: The created post as JSON.
+        400: If 'title' or 'content' are missing from the request body.
+    """
     data = request.get_json()
     if not data or 'title' not in data or 'content' not in data:
         return jsonify({"error": "title and content are required"}), 400
 
+    # Generate a new ID one higher than the current maximum
     new_id = max((post['id'] for post in POSTS), default=0) + 1
+    # Build post explicitly to avoid storing unexpected fields from the request
     new_post = {"title": data["title"], "content": data["content"], "id": new_id}
     POSTS.append(new_post)
     return jsonify(new_post), 201
 
 
-
 @app.route('/api/posts/<int:post_id>', methods=['DELETE'])
 def delete_post(post_id):
+    """Delete a blog post by ID.
+
+    Args:
+        post_id (int): The ID of the post to delete.
+
+    Returns:
+        200: The deleted post as JSON.
+        404: If no post with the given ID exists.
+    """
     global POSTS
 
     post_to_delete = next((post for post in POSTS if post['id'] == post_id), None)
@@ -45,13 +74,24 @@ def delete_post(post_id):
 
 @app.route('/api/posts/<int:post_id>', methods=['PUT'])
 def update_post(post_id):
+    """Update the title and content of an existing blog post.
+
+    Args:
+        post_id (int): The ID of the post to update.
+
+    Expects a JSON body with 'title' and 'content' fields.
+
+    Returns:
+        200: The updated post as JSON.
+        400: If 'title' or 'content' are missing from the request body.
+        404: If no post with the given ID exists.
+    """
     data = request.get_json()
     if not data or 'title' not in data or 'content' not in data:
         return jsonify({"error": "title and content are required"}), 400
 
     post_to_update = next((post for post in POSTS if post['id'] == post_id), None)
     if post_to_update:
-
         post_to_update['title'] = data['title']
         post_to_update['content'] = data['content']
         return jsonify(post_to_update)
@@ -59,9 +99,19 @@ def update_post(post_id):
         return jsonify({"error": "Post not found"}), 404
 
 
-
 @app.route('/api/posts/search')
 def find_post():
+    """Search blog posts by title and/or content.
+
+    Query Parameters:
+        title (str): Substring to search for in post titles.
+        content (str): Substring to search for in post content.
+
+    A post is included in results if it matches either parameter.
+
+    Returns:
+        200: A list of matching posts as JSON. Empty list if none found.
+    """
     found_posts = []
     title = request.args.get('title', '')
     content = request.args.get('content', '')
