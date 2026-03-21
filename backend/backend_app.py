@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
 
@@ -8,6 +9,7 @@ POSTS = [
     {"id": 1, "title": "First post", "content": "This is the first post."},
     {"id": 2, "title": "Second post", "content": "This is the second post."},
 ]
+
 
 
 @app.route('/api/posts', methods=['GET'])
@@ -18,9 +20,12 @@ def get_posts():
 
 @app.route('/api/posts', methods=['POST'])
 def add_post():
-    new_post = request.get_json()
+    data = request.get_json()
+    if not data or 'title' not in data or 'content' not in data:
+        return jsonify({"error": "title and content are required"}), 400
+
     new_id = max((post['id'] for post in POSTS), default=0) + 1
-    new_post['id'] = new_id
+    new_post = {"title": data["title"], "content": data["content"], "id": new_id}
     POSTS.append(new_post)
     return jsonify(new_post), 201
 
@@ -40,13 +45,15 @@ def delete_post(post_id):
 
 @app.route('/api/posts/<int:post_id>', methods=['PUT'])
 def update_post(post_id):
+    data = request.get_json()
+    if not data or 'title' not in data or 'content' not in data:
+        return jsonify({"error": "title and content are required"}), 400
+
     post_to_update = next((post for post in POSTS if post['id'] == post_id), None)
     if post_to_update:
-        data = request.get_json()
-        title = data['title']
-        content = data['content']
-        post_to_update['title'] = title
-        post_to_update['content'] = content
+
+        post_to_update['title'] = data['title']
+        post_to_update['content'] = data['content']
         return jsonify(post_to_update)
     else:
         return jsonify({"error": "Post not found"}), 404
