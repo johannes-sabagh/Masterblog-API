@@ -44,5 +44,30 @@ def delete_post(post_id):
     return jsonify(POSTS)
 
 
+@app.route('/api/posts/search')
+def find_post():
+    found_posts = []
+    title = request.args.get('title', '')
+    content = request.args.get('content', '')
+
+    if title:
+        for post in POSTS:
+            if title in post['title']:
+                found_posts.append(post)
+
+
+    if content:
+        for post in POSTS:
+            if content in post['content']:
+                found_posts.append(post)
+
+        return f'{found_posts}'
+
+
+
+
+
+
+
 if __name__ == '__main__':
     app.run(host="127.0.0.1", port=5002, debug=True)
