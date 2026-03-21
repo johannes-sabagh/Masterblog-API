@@ -11,6 +11,7 @@ Endpoints:
 """
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from operator import itemgetter
 
 
 app = Flask(__name__)
@@ -21,10 +22,32 @@ POSTS = [
     {"id": 2, "title": "Second post", "content": "This is the second post."},
 ]
 
+SORT_FIELDS = {'title', 'content'}  # Valid fields that posts can be sorted by
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
-    """Return a list of all blog posts."""
+    """Return all blog posts, with optional sorting.
+
+    Query Parameters:
+        sort (str): Field to sort by. Accepted values: 'title', 'content'.
+                    If omitted or invalid, posts are returned in insertion order.
+        direction (str): Sort order. 'desc' for descending, anything else defaults to ascending.
+
+    Returns:
+        200: List of all posts as JSON.
+    Example:
+        /api/posts?sort=title&direction=desc
+    """
+    sort = request.args.get('sort','')
+    direction = request.args.get('direction','')
+
+    if sort in SORT_FIELDS:
+        if direction == 'desc':
+            reverse = True
+        else:
+            reverse = False
+        return jsonify(sorted(POSTS, key=itemgetter(sort), reverse=reverse)), 200
+
     return jsonify(POSTS), 200
 
 
