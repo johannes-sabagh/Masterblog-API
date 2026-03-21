@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, redirect, url_for
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -10,38 +10,47 @@ POSTS = [
 ]
 
 
-@app.route('/api/posts', methods=['GET', 'POST'])
+@app.route('/api/posts', methods=['GET'])
 def get_posts():
-    if request.method == 'POST':
-        new_post = request.get_json()
-        new_id = max((post['id'] for post in POSTS), default=0)+1
-        new_post['id'] = new_id
-        POSTS.append(new_post)
-        return jsonify(new_post), 201
-
     return jsonify(POSTS), 200
 
-@app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PUT'])
+
+
+@app.route('/api/posts', methods=['POST'])
+def add_post():
+    new_post = request.get_json()
+    new_id = max((post['id'] for post in POSTS), default=0) + 1
+    new_post['id'] = new_id
+    POSTS.append(new_post)
+    return jsonify(new_post), 201
+
+
+
+@app.route('/api/posts/<int:post_id>', methods=['DELETE'])
 def delete_post(post_id):
     global POSTS
-    if request.method == 'DELETE':
-        post_to_delete = next((post for post in POSTS if post['id'] == post_id))
-        if post_to_delete:
-            POSTS = [p for p in POSTS if p['id'] != post_id]
-            return jsonify(post_to_delete)
-        else:
-            return 'not found'
-    elif request.method == 'PUT':
-        post_to_update = next((post for post in POSTS if post['id'] == post_id))
-        if post_to_update:
-            title = request.get_json()['title']
-            content = request.get_json()['content']
-            post_to_update['title'] = title
-            post_to_update['content'] = content
-            return jsonify(post_to_update)
-        else:
-            return 'not found'
-    return jsonify(POSTS)
+
+    post_to_delete = next((post for post in POSTS if post['id'] == post_id), None)
+    if post_to_delete:
+        POSTS = [p for p in POSTS if p['id'] != post_id]
+        return jsonify(post_to_delete)
+    else:
+        return jsonify({"error": "Post not found"}), 404
+
+
+@app.route('/api/posts/<int:post_id>', methods=['PUT'])
+def update_post(post_id):
+    post_to_update = next((post for post in POSTS if post['id'] == post_id), None)
+    if post_to_update:
+        data = request.get_json()
+        title = data['title']
+        content = data['content']
+        post_to_update['title'] = title
+        post_to_update['content'] = content
+        return jsonify(post_to_update)
+    else:
+        return jsonify({"error": "Post not found"}), 404
+
 
 
 @app.route('/api/posts/search')
@@ -50,23 +59,11 @@ def find_post():
     title = request.args.get('title', '')
     content = request.args.get('content', '')
 
-    if title:
-        for post in POSTS:
-            if title in post['title']:
-                found_posts.append(post)
+    for post in POSTS:
+        if (title and title in post['title']) or (content and content in post['content']):
+            found_posts.append(post)
 
-
-    if content:
-        for post in POSTS:
-            if content in post['content']:
-                found_posts.append(post)
-
-        return f'{found_posts}'
-
-
-
-
-
+    return jsonify(found_posts)
 
 
 if __name__ == '__main__':
